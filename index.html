@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>xkcd 2601 Drawer (2022 April Fools)</title>
+    <link rel="stylesheet" href="normalize.css" />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      html {
+        height: 100%;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica,
+          Arial, sans-serif, Apple Color Emoji, Segoe UI Emoji;
+        display: flex;
+        flex-direction: row;
+        height: 100%;
+      }
+      main {
+        width: 60vw;
+        height: 100%;
+      }
+      canvas {
+        width: 100%;
+        height: 100%;
+      }
+      aside {
+        padding: 1rem;
+        background: lightblue;
+        flex-grow: 1;
+      }
+      h1 {
+        margin: 0;
+        margin-bottom: 0.1em;
+      }
+      a {
+        color: #0463cf;
+        text-decoration: none;
+      }
+      a:hover,
+      a:focus {
+        text-decoration: underline;
+      }
+      #code {
+        resize: none;
+        width: 100%;
+        height: 70vh;
+        font-family: monospace;
+      }
+      .buttons {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+      }
+      #btn-reset {
+        position: fixed;
+        top: 0.5rem;
+        left: 0.5rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <canvas id="canvas"></canvas>
+      <button type="button" id="btn-reset">Reset zoom</button>
+    </main>
+    <aside>
+      <h1>xkcd 2601 Drawer</h1>
+      <a href="https://xkcd.com/2601/">Original comic</a> |
+      <a href="https://www.explainxkcd.com/wiki/index.php/2601:_Instructions">
+        Explain xkcd
+      </a>
+      |
+      <a href="https://github.com/theinternetftw/xkcd2601">
+        Transcription project
+      </a>
+      |
+      <a href="https://github.com/benediktwerner/xkcd2601">Source</a>
+
+      <br />
+      <br />
+      Code:
+      <textarea
+        id="code"
+        autosuggest="off"
+        data-gramm="false"
+        data-gramm_editor="false"
+        data-enable-grammarly="false"
+        spellcheck="false"
+      ></textarea>
+      <div class="buttons">
+        <button type="button" id="btn-draw">Draw</button>
+        <button type="button" id="btn-load">Load latest</button>
+      </div>
+    </aside>
+
+    <script>
+      const URL =
+        'https://raw.githubusercontent.com/theinternetftw/xkcd2601/main/xkcd.lgo';
+
+      const code = localStorage.getItem('code');
+      if (code) document.getElementById('code').value = code;
+
+      const canvas = document.getElementById('canvas');
+      let dragging = false,
+        last_x = 0,
+        last_y = 0,
+        last_touches,
+        drawCommands = [],
+        zoom = 0.75,
+        offset_x = 500,
+        offset_y = 450;
+
+      const render = () => {
+        const ctx = canvas.getContext('2d');
+        let pendown = true;
+
+        ctx.save();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.translate(offset_x, offset_y);
+        ctx.scale(zoom, zoom);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        for (const cmd of drawCommands) {
+          switch (cmd.type) {
+            case 'move':
+              if (pendown) ctx.lineTo(cmd.x, -cmd.y);
+              else ctx.moveTo(cmd.x, -cmd.y);
+              break;
+            case 'pendown':
+              pendown = true;
+              ctx.beginPath();
+              ctx.moveTo(cmd.x, -cmd.y);
+              break;
+            case 'penup':
+              pendown = false;
+              ctx.stroke();
+              break;
+            default:
+              throw new Error('Invalid draw command: ' + cmd.type);
+          }
+        }
+        if (pendown) ctx.stroke();
+        ctx.restore();
+      };
+
+      const canvas_mousedown = (event) => {
+        dragging = true;
+        last_x = event.pageX || event.touches[0].pageX;
+        last_y = event.pageY || event.touches[0].pageY;
+        last_touches = event.touches;
+      };
+      const canvas_mouseup = (event) => {
+        dragging = false;
+      };
+      function canvas_mousemove(event) {
+        if (!dragging) return;
+        event.preventDefault();
+
+        let new_x = last_x,
+          new_y = last_y;
+
+        if (event.type === 'touchmove') {
+          if (
+            last_touches &&
+            last_touches.length === 2 &&
+            event.touches.length === 2
+          ) {
+            const last_diff_x = last_touches[0].pageX - last_touches[1].pageX;
+            const last_diff_y = last_touches[0].pageY - last_touches[1].pageY;
+            const last_diff = Math.sqrt(
+              last_diff_x * last_diff_x + last_diff_y * last_diff_y
+            );
+            last_x = (last_touches[0].pageX + last_touches[1].pageX) / 2;
+            last_y = (last_touches[0].pageY + last_touches[1].pageY) / 2;
+
+            const curr_diff_x = event.touches[0].pageX - event.touches[1].pageX;
+            const curr_diff_y = event.touches[0].pageY - event.touches[1].pageY;
+            const curr_diff = Math.sqrt(
+              curr_diff_x * curr_diff_x + curr_diff_y * curr_diff_y
+            );
+            new_x = (event.touches[0].pageX + event.touches[1].pageX) / 2;
+            new_y = (event.touches[0].pageY + event.touches[1].pageY) / 2;
+
+            const zoom_change = Math.pow(curr_diff / last_diff, 2);
+            zoom *= zoom_change;
+
+            offset_x -=
+              ((new_x - canvas.offsetLeft - offset_x) * (zoom_change - 1)) /
+              zoom_change;
+            offset_y -=
+              ((new_y - canvas.offsetTop - offset_y) * (zoom_change - 1)) /
+              zoom_change;
+          } else {
+            new_x = event.touches[0].pageX;
+            new_y = event.touches[0].pageY;
+          }
+          last_touches = event.touches;
+        } else {
+          new_x = event.pageX;
+          new_y = event.pageY;
+        }
+        offset_x += new_x - last_x;
+        offset_y += new_y - last_y;
+        last_x = new_x;
+        last_y = new_y;
+
+        requestAnimationFrame(render);
+      }
+
+      document.addEventListener('DOMContentLoaded', () => {
+        const { width, height } = canvas.getBoundingClientRect();
+        canvas.width = width;
+        canvas.height = height;
+        offset_x = width / 2;
+        offset_y = height / 2;
+
+        canvas.addEventListener('mousedown', canvas_mousedown);
+        canvas.addEventListener('touchstart', canvas_mousedown);
+        canvas.addEventListener('mouseup', canvas_mouseup);
+        canvas.addEventListener('touchend', canvas_mouseup);
+        canvas.addEventListener('mousemove', canvas_mousemove);
+        canvas.addEventListener('touchmove', canvas_mousemove);
+        canvas.addEventListener('wheel', (e) => {
+          e.preventDefault();
+          const zoom_change = e.deltaY < 0 ? 1.25 : e.deltaY > 0 ? 0.8 : 1;
+          zoom *= zoom_change;
+          offset_x -= (e.offsetX - offset_x) * (zoom_change - 1);
+          offset_y -= (e.offsetY - offset_y) * (zoom_change - 1);
+          requestAnimationFrame(render);
+        });
+        window.addEventListener('resize', () => {
+          const { width, height } = canvas.getBoundingClientRect();
+          canvas.width = width;
+          canvas.height = height;
+          requestAnimationFrame(render);
+        });
+      });
+
+      document.getElementById('btn-reset').addEventListener('click', () => {
+        const { width, height } = canvas.getBoundingClientRect();
+        offset_x = width / 2;
+        offset_y = height / 2;
+        zoom = 1;
+        requestAnimationFrame(render);
+      });
+
+      document
+        .getElementById('btn-load')
+        .addEventListener('click', async () => {
+          const resp = await fetch(URL);
+          if (!resp.ok) {
+            alert(`Error: ${resp.status} ${resp.statusText}`);
+            return;
+          }
+          const text = await resp.text();
+          document.getElementById('code').value = text;
+          localStorage.setItem('code', text);
+        });
+
+      document.getElementById('btn-draw').addEventListener('click', () => {
+        const codeText = document.getElementById('code').value;
+        localStorage.setItem('code', codeText);
+        drawCommands = [];
+
+        const code = codeText
+          .replace(/;.*/g, '')
+          .toLowerCase()
+          .split(/(?:\n|\s)+/g);
+        const functions = new Map();
+        const builtins = {
+          sum: (a, b) => a + b,
+          product: (a, b) => a * b,
+          difference: (a, b) => a - b,
+          and: (a, b) => a && b,
+          or: (a, b) => a || b,
+          lessp: (a, b) => a < b,
+        };
+
+        let x = 0,
+          y = 0,
+          heading = 0,
+          globals = new Map();
+
+        const interpret = (i, locals) => {
+          if (i >= code.length) throw new Error('Unexpected EOF');
+          switch (code[i]) {
+            case 'output': {
+              const [x, used] = evaluate(i + 1, locals);
+              locals.set('output', x);
+              return used;
+            }
+            case 'make': {
+              const [x, used] = evaluate(i + 2, locals);
+              globals.set(code[i + 1].slice(1), x);
+              return used + 1;
+            }
+            case 'localmake': {
+              const [x, used] = evaluate(i + 2, locals);
+              locals.set(code[i + 1].slice(1), x);
+              return used + 1;
+            }
+            case 'setxy': {
+              const [xx, x_used] = evaluate(i + 1, locals);
+              const [yy, y_used] = evaluate(i + 1 + x_used, locals);
+              x = xx;
+              y = yy;
+              drawCommands.push({ type: 'move', x, y });
+              return x_used + y_used;
+            }
+            case 'forward': {
+              const [amnt, used] = evaluate(i + 1, locals);
+              x += Math.round(amnt * Math.sin((heading * Math.PI) / 180));
+              y += Math.round(amnt * Math.cos((heading * Math.PI) / 180));
+              drawCommands.push({ type: 'move', x, y });
+              return used;
+            }
+            case 'setheading': {
+              const [h, used] = evaluate(i + 1, locals);
+              heading = h;
+              return used;
+            }
+            case 'pendown':
+              drawCommands.push({ type: 'pendown', x, y });
+              return 0;
+            case 'penup':
+              drawCommands.push({ type: 'penup' });
+              return 0;
+            case 'ifelse': {
+              const [cond, used] = evaluate(i + 1, locals);
+              const start = i;
+              i += used + 2;
+              if (cond) {
+                for (; i < code.length && code[i] !== ']'; i++)
+                  i += interpret(i, locals);
+                for (i += 2; i < code.length && code[i] !== ']'; i++);
+              } else {
+                for (; i < code.length && code[i] !== ']'; i++);
+                for (i += 2; i < code.length && code[i] !== ']'; i++)
+                  i += interpret(i, locals);
+              }
+              if (i >= code.length) throw new Error('Unclosed ifelse');
+              return i - start;
+            }
+            case 'window':
+            case 'clearscreen':
+              return 0;
+            case 'setpensize':
+              return 1;
+            default:
+              return evaluate(i, locals)[1] - 1;
+          }
+        };
+        const evaluate = (i, locals) => {
+          if (i >= code.length) throw new Error('Unexpected EOF');
+          const first = code[i];
+          if (!isNaN(first)) return [parseFloat(first), 1];
+          if (first[0] === ':') {
+            const name = first.slice(1);
+            if (locals.has(name)) return [locals.get(name), 1];
+            if (globals.has(name)) return [globals.get(name), 1];
+            throw new Error('Undefined variable: ' + name);
+          }
+          if (first === 'xcor') return [x, 1];
+          if (first === 'ycor') return [y, 1];
+          if (first in builtins) {
+            const [a, a_used] = evaluate(i + 1, locals);
+            const [b, b_used] = evaluate(i + 1 + a_used, locals);
+            return [builtins[first](a, b), 1 + a_used + b_used];
+          }
+          if (first === 'sqrt') {
+            const [x, used] = evaluate(i + 1, locals);
+            return [Math.sqrt(x), 1 + used];
+          }
+          if (functions.has(first)) {
+            const fn = functions.get(first);
+            const args = new Map();
+            let used = 1;
+            for (const arg of fn.args) {
+              const [x, u] = evaluate(i + used, locals);
+              args.set(arg, x);
+              used += u;
+            }
+            for (i = fn.body_start; i < fn.body_end; i++)
+              i += interpret(i, args);
+            return [args.get('output'), used];
+          }
+          throw new Error('Unknown command: ' + first);
+        };
+
+        for (let i = 0; i < code.length; i++) {
+          if (code[i] === 'to') {
+            const name = code[++i];
+            const args = [];
+            while (code[++i][0] === ':') args.push(code[i].slice(1));
+            const body_start = i;
+            while (i < code.length && code[++i] !== 'end');
+            if (code[i] !== 'end') {
+              alert('Missing END');
+              break;
+            }
+            functions.set(name, { args, body_start, body_end: i });
+            if (name === 'xkcd') code.push('xkcd');
+          } else {
+            try {
+              i += interpret(i);
+            } catch (e) {
+              alert(e);
+              throw e;
+            }
+          }
+        }
+
+        requestAnimationFrame(render);
+      });
+    </script>
+  </body>
+</html>
