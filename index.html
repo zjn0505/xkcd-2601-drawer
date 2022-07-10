@@ -23,17 +23,20 @@
         height: 100%;
       }
       main {
-        width: 60vw;
+        width: 100%;
         height: 100%;
       }
       canvas {
         width: 100%;
         height: 100%;
       }
-      aside {
+      #aside {
         padding: 1rem;
         background: lightblue;
         flex-grow: 1;
+        bottom: 0px;
+        right: 0px;
+        position: absolute;
       }
       h1 {
         margin: 0;
@@ -50,7 +53,7 @@
       #code {
         resize: none;
         width: 100%;
-        height: 70vh;
+        height: 65vh;
         font-family: monospace;
       }
       .buttons {
@@ -66,43 +69,42 @@
     </style>
   </head>
   <body>
-    <main>
+    <main id="main">
       <canvas id="canvas"></canvas>
       <button type="button" id="btn-reset">Reset zoom</button>
+      <div id="aside">
+        <h1>xkcd 2601 Drawer</h1>
+        <a href="https://xkcd.com/2601/">Original comic</a> |
+        <a href="https://www.explainxkcd.com/wiki/index.php/2601:_Instructions">
+          Explain xkcd
+        </a>
+        |
+        <a href="https://github.com/theinternetftw/xkcd2601">
+          Transcription project
+        </a>
+        |
+        <a href="https://github.com/benediktwerner/xkcd-2601-drawer">Source</a>
+        <br />
+        Code:
+        <textarea
+          id="code"
+          autosuggest="off"
+          data-gramm="false"
+          data-gramm_editor="false"
+          data-enable-grammarly="false"
+          spellcheck="false"
+        ></textarea>
+        <div class="buttons">
+          <button type="button" id="btn-draw">Draw</button>
+          <button type="button" id="btn-load">Load latest</button>
+        </div>
+  
+        <br />
+        <div class="slidecontainer">
+          <input type="range" min="1" max="991" value="0" class="slider" id="myRange" style="width: 100%;">
+        </div>
+      </div>
     </main>
-    <aside>
-      <h1>xkcd 2601 Drawer</h1>
-      <a href="https://xkcd.com/2601/">Original comic</a> |
-      <a href="https://www.explainxkcd.com/wiki/index.php/2601:_Instructions">
-        Explain xkcd
-      </a>
-      |
-      <a href="https://github.com/theinternetftw/xkcd2601">
-        Transcription project
-      </a>
-      |
-      <a href="https://github.com/benediktwerner/xkcd-2601-drawer">Source</a>
-      <br />
-      Code:
-      <textarea
-        id="code"
-        autosuggest="off"
-        data-gramm="false"
-        data-gramm_editor="false"
-        data-enable-grammarly="false"
-        spellcheck="false"
-      ></textarea>
-      <div class="buttons">
-        <button type="button" id="btn-draw">Draw</button>
-        <button type="button" id="btn-load">Load latest</button>
-      </div>
-
-      <br />
-      <br />
-      <div class="slidecontainer">
-        <input type="range" min="1" max="991" value="0" class="slider" id="myRange" style="width: 100%;">
-      </div>
-    </aside>
 
     <script>
       var progress = 0
