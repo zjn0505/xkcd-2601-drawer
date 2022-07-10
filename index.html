@@ -82,8 +82,6 @@
       </a>
       |
       <a href="https://github.com/benediktwerner/xkcd-2601-drawer">Source</a>
-
-      <br />
       <br />
       Code:
       <textarea
@@ -98,9 +96,16 @@
         <button type="button" id="btn-draw">Draw</button>
         <button type="button" id="btn-load">Load latest</button>
       </div>
+
+      <br />
+      <br />
+      <div class="slidecontainer">
+        <input type="range" min="1" max="991" value="0" class="slider" id="myRange" style="width: 100%;">
+      </div>
     </aside>
 
     <script>
+      var progress = 0
       const URL =
         'https://raw.githubusercontent.com/theinternetftw/xkcd2601/main/xkcd.lgo';
 
@@ -243,6 +248,14 @@
         });
       });
 
+      var slider = document.getElementById("myRange");
+      progress = slider.value; // Display the default slider value
+      // Update the current slider value (each time you drag the slider handle)
+      slider.oninput = function() {
+        progress = this.value;
+        draw()
+      }
+
       document.getElementById('btn-reset').addEventListener('click', () => {
         const { width, height } = canvas.getBoundingClientRect();
         offset_x = width / 2;
@@ -264,15 +277,24 @@
           localStorage.setItem('code', text);
         });
 
-      document.getElementById('btn-draw').addEventListener('click', () => {
+      var rawcode = [];
+      var penups = [];
+      let draw = () => {
+        console.log(`Progress ${progress}`)
         const codeText = document.getElementById('code').value;
         localStorage.setItem('code', codeText);
         drawCommands = [];
+        
+        if (penups.length == 0) {
+          rawcode = codeText
+            .replace(/;.*/g, '')
+            .toLowerCase()
+            .split(/(?:\n|\s)+/g);
 
-        const code = codeText
-          .replace(/;.*/g, '')
-          .toLowerCase()
-          .split(/(?:\n|\s)+/g);
+          
+          rawcode.forEach((t, i) => {if (t == "penup") penups.push(i)})
+        }
+
         const functions = new Map();
         const builtins = {
           sum: (a, b) => a + b,
@@ -287,7 +309,16 @@
           y = 0,
           heading = 0,
           globals = new Map();
-
+        var end = penups[progress] + 1
+        if (parseInt(progress) == penups.length) {
+          end = rawcode.length;
+        }
+        
+        var code = rawcode.slice(0, end);
+        console.log(`Progress ${progress} code length ${code.length} rawcode length ${rawcode.length} ${code.slice(-2)}`)
+        if (parseInt(progress) != penups.length) {
+          code.push("end")
+        }
         const interpret = (i, locals) => {
           if (i >= code.length) throw new Error('Unexpected EOF');
           switch (code[i]) {
@@ -418,7 +449,8 @@
         }
 
         requestAnimationFrame(render);
-      });
+      }
+      document.getElementById('btn-draw').addEventListener('click', draw);
     </script>
   </body>
 </html>
