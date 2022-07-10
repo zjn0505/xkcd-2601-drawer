@@ -37,6 +37,7 @@
         bottom: 0px;
         right: 0px;
         position: absolute;
+        width: 100%;
       }
       h1 {
         margin: 0;
@@ -73,29 +74,33 @@
       <canvas id="canvas"></canvas>
       <button type="button" id="btn-reset">Reset zoom</button>
       <div id="aside">
-        <h1>xkcd 2601 Drawer</h1>
-        <a href="https://xkcd.com/2601/">Original comic</a> |
-        <a href="https://www.explainxkcd.com/wiki/index.php/2601:_Instructions">
-          Explain xkcd
-        </a>
-        |
-        <a href="https://github.com/theinternetftw/xkcd2601">
-          Transcription project
-        </a>
-        |
-        <a href="https://github.com/benediktwerner/xkcd-2601-drawer">Source</a>
-        <br />
-        Code:
-        <textarea
-          id="code"
-          autosuggest="off"
-          data-gramm="false"
-          data-gramm_editor="false"
-          data-enable-grammarly="false"
-          spellcheck="false"
-        ></textarea>
+        <div id="toggle">
+          <h1 class="toggle">xkcd 2601 Drawer</h1>
+          <a href="https://xkcd.com/2601/" class="toggle">Original comic</a> |
+          <a href="https://www.explainxkcd.com/wiki/index.php/2601:_Instructions">
+            Explain xkcd
+          </a>
+          |
+          <a href="https://github.com/theinternetftw/xkcd2601">
+            Transcription project
+          </a>
+          |
+          <a href="https://github.com/benediktwerner/xkcd-2601-drawer">Source</a>
+          <br />
+          Code:
+          <textarea
+            id="code"
+            autosuggest="off"
+            data-gramm="false"
+            data-gramm_editor="false"
+            data-enable-grammarly="false"
+            spellcheck="false"
+          ></textarea>
+        </div>
+        
         <div class="buttons">
           <button type="button" id="btn-draw">Draw</button>
+          <button type="button" id="btn-toggle">Toggle</button>
           <button type="button" id="btn-load">Load latest</button>
         </div>
   
@@ -453,6 +458,14 @@
         requestAnimationFrame(render);
       }
       document.getElementById('btn-draw').addEventListener('click', draw);
+      document.getElementById('btn-toggle').addEventListener('click', () => {
+      let toggle = document.getElementById("toggle")
+        if (toggle.style.display != "none") {
+          toggle.style.display = "none"
+        } else {
+          toggle.style.display = ""
+        }
+      })
     </script>
   </body>
 </html>
