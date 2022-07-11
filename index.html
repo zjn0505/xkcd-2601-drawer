@@ -125,9 +125,14 @@
         last_y = 0,
         last_touches,
         drawCommands = [],
-        zoom = 0.75,
+        zoom = 0.5,
         offset_x = 500,
         offset_y = 450;
+
+      let cacheCommands = localStorage.getItem("drawCommands")
+      if (cacheCommands) {
+        drawCommands = JSON.parse(cacheCommands)
+      }
 
       const render = () => {
         const ctx = canvas.getContext('2d');
@@ -139,7 +144,12 @@
         ctx.scale(zoom, zoom);
         ctx.beginPath();
         ctx.moveTo(0, 0);
+        console.log(`drawCommands length ${drawCommands.length}`)
+        var penups = 0
         for (const cmd of drawCommands) {
+          if (penups >= progress) {
+            break
+          }
           switch (cmd.type) {
             case 'move':
               if (pendown) ctx.lineTo(cmd.x, -cmd.y);
@@ -153,6 +163,7 @@
             case 'penup':
               pendown = false;
               ctx.stroke();
+              penups += 1
               break;
             default:
               throw new Error('Invalid draw command: ' + cmd.type);
@@ -222,7 +233,6 @@
         offset_y += new_y - last_y;
         last_x = new_x;
         last_y = new_y;
-
         requestAnimationFrame(render);
       }
 
@@ -282,25 +292,23 @@
           const text = await resp.text();
           document.getElementById('code').value = text;
           localStorage.setItem('code', text);
+
+          if ("requestIdleCallback" in window) {
+            requestIdleCallback(prepare)
+          }
         });
 
-      var rawcode = [];
-      var penups = [];
-      let draw = () => {
-        console.log(`Progress ${progress}`)
+      const prepare = () => {
+        console.time("prepare")
         const codeText = document.getElementById('code').value;
         localStorage.setItem('code', codeText);
+
         drawCommands = [];
         
-        if (penups.length == 0) {
-          rawcode = codeText
-            .replace(/;.*/g, '')
-            .toLowerCase()
-            .split(/(?:\n|\s)+/g);
-
-          
-          rawcode.forEach((t, i) => {if (t == "penup") penups.push(i)})
-        }
+        const code = codeText
+          .replace(/;.*/g, '')
+          .toLowerCase()
+          .split(/(?:\n|\s)+/g);
 
         const functions = new Map();
         const builtins = {
@@ -316,16 +324,9 @@
           y = 0,
           heading = 0,
           globals = new Map();
-        var end = penups[progress] + 1
-        if (parseInt(progress) == penups.length) {
-          end = rawcode.length;
-        }
-        
-        var code = rawcode.slice(0, end);
-        console.log(`Progress ${progress} code length ${code.length} rawcode length ${rawcode.length} ${code.slice(-2)}`)
-        if (parseInt(progress) != penups.length) {
-          code.push("end")
-        }
+
+        var penups = 0;
+
         const interpret = (i, locals) => {
           if (i >= code.length) throw new Error('Unexpected EOF');
           switch (code[i]) {
@@ -369,6 +370,7 @@
               return 0;
             case 'penup':
               drawCommands.push({ type: 'penup' });
+              penups += 1
               return 0;
             case 'ifelse': {
               const [cond, used] = evaluate(i + 1, locals);
@@ -431,7 +433,6 @@
           }
           throw new Error('Unknown command: ' + first);
         };
-
         for (let i = 0; i < code.length; i++) {
           if (code[i] === 'to') {
             const name = code[++i];
@@ -454,7 +455,13 @@
             }
           }
         }
+        console.timeEnd("prepare")
+        console.log(`Prepare done, drawCommands length ${drawCommands.length}, penups ${penups}`)
+        document.getElementById("myRange").max = penups
+        localStorage.setItem("drawCommands", JSON.stringify(drawCommands))
+      }
 
+      let draw = () => {
         requestAnimationFrame(render);
       }
       document.getElementById('btn-draw').addEventListener('click', draw);
