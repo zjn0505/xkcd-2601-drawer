@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>xkcd 2601 Drawer (2022 April Fools)</title>
+    <title>xkcd: Instructions</title>
     <link rel="stylesheet" href="normalize.css" />
     <style>
       *,
@@ -87,6 +87,12 @@
           |
           <a href="https://github.com/benediktwerner/xkcd-2601-drawer">Source</a>
           <br />
+          <div id="player" style="display: none;">
+            <br />
+            <audio controls src="https://xkcd.com/2601/radio.mp3" style="width: 100%;"></audio>
+            <br />
+          </div>
+          <br />
           Code:
           <textarea
             id="code"
@@ -112,6 +118,13 @@
     </main>
 
     <script>
+      function togglePlayer() {
+        if (document.getElementById("player").style.display == "none") {
+          document.getElementById("player").style.display = "" 
+        } else {
+          document.getElementById("player").style.display = "none" 
+        }
+      }
       var progress = 0
       const URL =
         'https://raw.githubusercontent.com/theinternetftw/xkcd2601/main/xkcd.lgo';
